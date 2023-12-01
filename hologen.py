@@ -164,14 +164,6 @@ def direct_search_symmetry_binary(illum, target, replay_mask):
     holo = illum * (np.random.randint(2, size=illum.shape) * 2 - 3)
     replay = np.fft.fft2(holo)
 
-    '''
-    print('shape',np.shape(np.random.randint(2, size=illum.shape) * 2 - 3)) #
-    print(illum.shape) # illum is 5000x5000 orig so correct
-    print(np.shape(holo)) # holo is 2500x2500 originally
-    print(np.shape(replay))# replay is  2742x1 complex double originally  
-    '''
-
-
     # Ensure power in target is half the power in the hologram
     target = target / np.sqrt(np.sum(np.abs(target)**2)) * np.sqrt(np.sum(np.abs(holo)**2)) * np.sqrt(Nx) * np.sqrt(Nx)
 
@@ -182,18 +174,6 @@ def direct_search_symmetry_binary(illum, target, replay_mask):
     holo = holo[:Nx//2, :Nx//2]
     x_mesh = x_mesh[:Nx//2, :Nx//2]
     y_mesh = y_mesh[:Nx//2, :Nx//2]
-
-    '''
-    print('np.shape(target)')
-    print(np.shape(target))
-
-    print('np.shape(replay)')
-    print(np.shape(replay)) 
-
-    print('np.shape(x_mesh old)')
-    print(np.shape(x_mesh))
-    '''
-
     replay = replay[:Nx//2, :Nx//2]
 
     # Apply mask to relevant arrays
@@ -202,32 +182,6 @@ def direct_search_symmetry_binary(illum, target, replay_mask):
     #replay = replay[:Nx//2, :Nx//2]
     replay = replay[replay_mask]
     masked_target = np.conj(target[replay_mask])
-
-
-    '''
-    print('np.shape(replay_mask)')
-    print(np.shape(replay_mask))   
-
-    print('np.shape(x_mesh)')
-    print(np.shape(x_mesh)) 
-    
-    print('np.shape(replay)')
-    print(np.shape(replay))
-
-    print('np.shape(masked target)')
-    print(np.shape(masked_target))
-
-    #sys.exit()
-
-    plt.figure()
-    plt.imshow(np.abs(replay))
-
-    plt.figure()
-    plt.imshow(np.abs(replay_mask))
-    plt.show()
-    sys.exit()
-    '''
-
 
     target_power = np.sum(np.abs(target)**2)
     masked_target_power = np.sum(np.abs(masked_target)**2)

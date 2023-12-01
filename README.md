@@ -1,4 +1,4 @@
 This repo generates holograms in python.
-I get a 15% speedup in python compared to matlab.
+I get a 15% speedup in python compared to matlab for 1e6 iterations.
 This is based on https://github.com/ralfmouthaan/Paper-PCF-Mode-Excitation.
-fuck matlab
+Fuck matlab.
