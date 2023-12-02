@@ -4,6 +4,7 @@ import scipy
 from scipy.special import jn, kn
 import sys
 import time
+from tqdm import tqdm
 
 def besselj(l, U):
     return jn(l,U)
@@ -125,7 +126,7 @@ def LP_Mode(x, l, m):
     return F
 
 
-def direct_search_symmetry_binary(illum, target, replay_mask):
+def direct_search_symmetry_binary(illum, target, replay_mask, trainingloops):
     # Parameters
     bol_output_to_file = False
     Nx = illum.shape[0]
@@ -166,7 +167,6 @@ def direct_search_symmetry_binary(illum, target, replay_mask):
 
     # Ensure power in target is half the power in the hologram
     target = target / np.sqrt(np.sum(np.abs(target)**2)) * np.sqrt(np.sum(np.abs(holo)**2)) * np.sqrt(Nx) * np.sqrt(Nx)
-
    
     # Take NW quadrant in all cases
     target = target[:Nx//2, :Nx//2]
@@ -174,6 +174,7 @@ def direct_search_symmetry_binary(illum, target, replay_mask):
     holo = holo[:Nx//2, :Nx//2]
     x_mesh = x_mesh[:Nx//2, :Nx//2]
     y_mesh = y_mesh[:Nx//2, :Nx//2]
+
     replay = replay[:Nx//2, :Nx//2]
 
     # Apply mask to relevant arrays
@@ -193,42 +194,27 @@ def direct_search_symmetry_binary(illum, target, replay_mask):
     disp_str = ''
     gamma = 10
     last_displayed = 0
-    
-    if bol_output_to_file:
-        fid_local_c = open('Local_c.txt', 'w+')
-        fid_global_c = open('Global_c.txt', 'w+')
-    
-    while iter_no < 1e6:
-        #m = np.random.randint(1, illum_edge + 1)
-        #n = np.random.randint(1, illum_edge + 1)
 
+    
+    for aaaaa in tqdm(range(trainingloops)): 
         m = np.random.randint(1, illum_edge + 1)
         n = np.random.randint(1, illum_edge + 1)
 
         old_pixel = holo[m-1, n-1]
-        #print('old pixel',np.shape(old_pixel))
-        #print(old_pixel)
 
         if np.abs(old_pixel) < 0.001 and np.sqrt(m**2 + n**2) < illum_edge:
             illum_edge = int(np.round(np.sqrt(m**2 + n**2)))
             continue
         new_pixel = -old_pixel
 
-        
         # Update replay
         delta_replay = (new_pixel - old_pixel) * np.exp(-2 * np.pi * 1j / Nx * ((n - 1) * x_mesh + (m - 1) * y_mesh))
         delta_replay += left_right_symmetry * (new_pixel - old_pixel) * np.exp(-2 * np.pi * 1j / Nx * (-(n - 1) * x_mesh + (m - 1) * y_mesh))
         delta_replay += up_down_symmetry * (new_pixel - old_pixel) * np.exp(-2 * np.pi * 1j / Nx * ((n - 1) * x_mesh - (m - 1) * y_mesh))
         delta_replay += left_right_symmetry * up_down_symmetry * (new_pixel - old_pixel) * np.exp(-2 * np.pi * 1j / Nx * (-(n - 1) * x_mesh - (m - 1) * y_mesh))
 
-
-        #print(np.shape())
-
         new_replay = replay + delta_replay
         
-        #sys.exit()
-
-
         # Calculate local overlap integral
         overlap_integral = np.abs(np.sum(new_replay * masked_target))**2
         masked_replay_power = np.sum(np.abs(new_replay)**2)
@@ -242,22 +228,7 @@ def direct_search_symmetry_binary(illum, target, replay_mask):
             max_global_c = global_c
             holo[m-1, n-1] = new_pixel
             replay = new_replay
-            
-            if iter_no - last_displayed > 10000:
-                print('\b' * len(disp_str), end='', flush=True)
-                disp_str = f'{iter_no}; Local Overlap = {max_local_c}; Global Overlap = {max_global_c}\n'
-                print(disp_str, end='', flush=True)
-                last_displayed = iter_no
-                
-                if bol_output_to_file:
-                    fid_local_c.write(f'{iter_no}\t{max_local_c}\n')
-                    fid_global_c.write(f'{iter_no}\t{max_global_c}\n')
         
-        iter_no += 1
-    
-    if bol_output_to_file:
-        fid_local_c.close()
-        fid_global_c.close()
     
     holo = np.concatenate((holo, left_right_symmetry * np.fliplr(holo)), axis=1)
     holo = np.concatenate((holo, up_down_symmetry * np.flipud(holo)), axis=0)
@@ -265,7 +236,7 @@ def direct_search_symmetry_binary(illum, target, replay_mask):
     illum = np.fft.fftshift(illum)
     holo[holo >= 0] = 1
     holo[holo < 0] = -1
-    
+    '''
     ret_val = {
         'Holo': holo,
         'Illum': illum,
@@ -274,7 +245,7 @@ def direct_search_symmetry_binary(illum, target, replay_mask):
         'globalc': max_global_c,
         'localc': max_local_c
     }
-
+    '''
     replay = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(holo * illum)))
     
     return holo, replay
@@ -282,8 +253,6 @@ def direct_search_symmetry_binary(illum, target, replay_mask):
 
 
 if __name__ == '__main__':
-
-    t1 = time.time()
     # User-Entered Parameters
     l = 2
     m = 1
@@ -297,6 +266,8 @@ if __name__ == '__main__':
     FibreDiameter = 25e-6
     dx = 3.74e-6
     SMF_NA = 0.14
+    trainingloops = 100000
+
 
     # Illumination Mask
     x = np.linspace(-Nx/2, Nx/2, Nx)
@@ -332,11 +303,15 @@ if __name__ == '__main__':
     Mask[r_mesh > 20e-6] = 0
     Mask = Mask.astype(bool)
 
-    Holo, Replay = direct_search_symmetry_binary(Illum, Target, Mask);   
+    t1 = time.time()
+    Holo, Replay = direct_search_symmetry_binary(Illum, Target, Mask, trainingloops)       
     t2 = time.time()
 
     elapsed_time = t2 - t1
-    print('total time to run:', elapsed_time)
+    print('total time to run search:', elapsed_time)
+
+    #sys.exit()
+
 
 
     plt.figure()
@@ -348,84 +323,3 @@ if __name__ == '__main__':
 
     # Specify the path to save the CSV file
     csv_file_path = 'pytestholo21.csv'
-
-    # Save the NumPy array as a CSV file
-    np.savetxt(csv_file_path, np.angle(Holo), delimiter=',')
-
-
-    sys.exit()
-
-
-    # Plot Illumination
-    plt.figure()
-    plt.imshow(Illum, extent=(x.min()*1e3, x.max()*1e3, x.min()*1e3, x.max()*1e3))
-    plt.axis('square')
-    plt.title('Illumination')
-    plt.xlabel('mm')
-    plt.ylabel('mm')
-    #plt.show()
-
-    # Plotting
-    plt.figure()
-
-    # Subplot 1
-    plt.subplot(1, 2, 1)
-    plt.imshow(np.abs(Target), extent=(u.min()*1e6, u.max()*1e6, u.min()*1e6, u.max()*1e6))
-    plt.title('|Target|')
-    plt.xlabel('\u03BCm')
-    plt.ylabel('\u03BCm')
-    plt.axis('square')
-    plt.xlim([-35, 35])
-    plt.ylim([-35, 35])
-
-    # Subplot 2
-    plt.subplot(1, 2, 2)
-    plt.imshow(np.angle(Target), extent=(u.min()*1e6, u.max()*1e6, u.min()*1e6, u.max()*1e6))
-    plt.title('\u2220Target')
-    plt.xlabel('\u03BCm')
-    plt.ylabel('\u03BCm')
-    plt.axis('square')
-    plt.xlim([-35, 35])
-    plt.ylim([-35, 35])
-
-    #plt.tight_layout()
-
-    # Plot hologram
-    plt.figure()
-    plt.imshow(np.angle(Holo))
-    plt.title('Hologram')
-    plt.axis('square')
-
-
-    # Plot Replay
-    plt.figure(figsize=(10, 5))
-
-    # Subplot 1
-    plt.subplot(1, 2, 1)
-    plt.imshow(np.abs(Replay), extent=(u.min()*1e6, u.max()*1e6, u.min()*1e6, u.max()*1e6))
-    plt.title('|Replay|')
-    plt.xlabel('\u03BCm')
-    plt.ylabel('\u03BCm')
-    plt.axis('square')
-    plt.xlim([-35, 35])
-    plt.ylim([-35, 35])
-
-    # Subplot 2
-    plt.subplot(1, 2, 2)
-    plt.imshow(np.angle(Replay), extent=(u.min()*1e6, u.max()*1e6, u.min()*1e6, u.max()*1e6))
-    plt.title('\u2220Replay')
-    plt.xlabel('\u03BCm')
-    plt.ylabel('\u03BCm')
-    plt.axis('square')
-    plt.xlim([-35, 35])
-    plt.ylim([-35, 35])
-
-    plt.tight_layout()
-    plt.show()
-
-    # Save result
-    HoloDiameter = 100  # Adjust the value of HoloDiameter as needed
-    #Holo = Holo
-    #Holo = Holo[Holo.shape[0]//2 - HoloDiameter//2:Holo.shape[0]//2 + HoloDiameter//2, Holo.shape[1]//2 - HoloDiameter//2:Holo.shape[1]//2 + HoloDiameter//2-1]
-    #np.savetxt(f'pyHolo-LP{l}{m}.csv', np.angle(Holo), delimiter=',')
-
