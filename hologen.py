@@ -190,12 +190,8 @@ def direct_search_symmetry_binary(illum, target, replay_mask, trainingloops):
     # Direct Search
     max_local_c = 0
     max_global_c = 0
-    iter_no = 0
-    disp_str = ''
     gamma = 10
-    last_displayed = 0
 
-    
     for aaaaa in tqdm(range(trainingloops)): 
         m = np.random.randint(1, illum_edge + 1)
         n = np.random.randint(1, illum_edge + 1)
@@ -251,7 +247,6 @@ def direct_search_symmetry_binary(illum, target, replay_mask, trainingloops):
     return holo, replay
 
 
-
 if __name__ == '__main__':
     # User-Entered Parameters
     l = 2
@@ -267,7 +262,6 @@ if __name__ == '__main__':
     dx = 3.74e-6
     SMF_NA = 0.14
     trainingloops = 100000
-
 
     # Illumination Mask
     x = np.linspace(-Nx/2, Nx/2, Nx)
